@@ -1,6 +1,6 @@
-# teavet [![](https://github.com/ksrof/teavet/workflows/build/badge.svg)](https://github.com/ksrof/teavet/actions)
+# teavet ![Go workflow](https://github.com/ksrof/teavet/actions/workflows/go.yml/badge.svg)
 
-Teavet lets you log errors with different types of characteristics, each one have their own purpose and provide different outputs accordingly.
+Teavet lets you log errors with different types of characteristics, each one has their own purpose and provide different outputs accordingly.
 
 ![Teavet](./teavet.png)
 
