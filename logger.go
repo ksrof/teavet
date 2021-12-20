@@ -42,8 +42,8 @@ type Optional struct {
 	Error   error  `json:"error"`
 }
 
-// StartLogger creates log file at the root of the current working directory
-func StartLogger() (err error) {
+// StartLog creates log file at the root of the current working directory
+func StartLog() (err error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Unable to get working directory: %v", err)
