@@ -14,66 +14,74 @@ go get github.com/ksrof/teavet
 ### Logger types
 ```go
 // Log with filename, line, timestamp, status, message and error
-// status can be set to: success, info, warning, fatal and panic
-teavet.Logger("success", "Teavet is up and running!", nil)
+// status can be set to: success, info, error, fatal and panic
+teavet.Complete("success", "Teavet is up and running!", nil)
 
 // Output
-// ### File: path/to/file.go
-// ### Line: 35
-// ### Timestamp: 2021-12-20 14:46:26.752817195 +0000 UTC
-// ### Status: success
-// ### Message: Teavet is up and running!
-// ### Error: <nil>
+// | File: path/to/file.go
+// | Line: 35
+// | Timestamp: 2021-12-21T16:06:46+01:00
+// | Status: success
+// | Message: Teavet is up and running!
+// | Error: <nil>
 
 // Log with filename, line and timestamp
-teavet.SimpleLogger()
+teavet.Simple()
 
 // Output
-// ### File: path/to/file.go
-// ### Line: 35
-// ### Timestamp: 2021-12-20 14:46:26.752817195 +0000 UTC
+// | File: path/to/file.go
+// | Line: 35
+// | Timestamp: 2021-12-21T16:06:46+01:00
 
 // Log with filename, line, timestamp and status
-teavet.StatusLogger("warning")
+teavet.Status("info")
 
 // Output
-// ### File: path/to/file.go
-// ### Line: 35
-// ### Timestamp: 2021-12-20 14:46:26.752817195 +0000 UTC
-// ### Status: warning
+// | File: path/to/file.go
+// | Line: 35
+// | Timestamp: 2021-12-21T16:06:46+01:00
+// | Status: info
 
 // Log with filename, line, timestamp and message
-teavet.MessageLogger("Teavet is up and running!")
+teavet.Message("Teavet is up and running!")
 
 // Output
-// ### File: path/to/file.go
-// ### Line: 35
-// ### Timestamp: 2021-12-20 14:46:26.752817195 +0000 UTC
-// ### Message: Teavet is up and running!
+// | File: path/to/file.go
+// | Line: 35
+// | Timestamp: 2021-12-21T16:06:46+01:00
+// | Message: Teavet is up and running!
 
 // Log with filename, line, timestamp and error
-teavet.ErrorLogger(err)
+teavet.Error(err)
 
 // Output
-// ### File: path/to/file.go
-// ### Line: 35
-// ### Timestamp: 2021-12-20 14:46:26.752817195 +0000 UTC
-// ### Error: failed to initialize database...
+// | File: path/to/file.go
+// | Line: 35
+// | Timestamp: 2021-12-21T16:06:46+01:00
+// | Error: failed to initialize database...
 
 // Log with filename, line, timestamp and error
-teavet.PanicLogger(err)
+teavet.Fatal(err)
 
 // Output
-// ### File: path/to/file.go
-// ### Line: 35
-// ### Timestamp: 2021-12-20 14:46:26.752817195 +0000 UTC
-// ### Error: failed to initialize database...
+// | File: path/to/file.go
+// | Line: 35
+// | Timestamp: 2021-12-21T16:06:46+01:00
+// | Error: failed to initialize database...
+
+// Log with filename, line, timestamp and error
+teavet.Panic(err)
+
+// Output
+// | File: path/to/file.go
+// | Line: 35
+// | Timestamp: 2021-12-21T16:06:46+01:00
+// | Error: failed to initialize database...
 ```
 
 ## Todo
 
-* Improve the logger output
-* Use the fmt package
+* Use a another color to differentiate between field and value.
 
 ## Credits
 
