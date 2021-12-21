@@ -13,37 +13,47 @@ import (
 	"time"
 )
 
-// Colors to represent different types of logs
+// 8-16 ANSI color codes for normal and bright
 var (
-	Reset  = "\033[0m"
-	Red    = "\033[31m"
-	Green  = "\033[32m"
-	Yellow = "\033[33m"
-	Blue   = "\033[34m"
-	Purple = "\033[35m"
-	Cyan   = "\033[36m"
-	Gray   = "\033[37m"
-	White  = "\033[97m"
+	Reset         = "\u001b[0m"
+	BrightBlack   = "\u001b[30;1m"
+	BrightRed     = "\u001b[31;1m"
+	BrightGreen   = "\u001b[32;1m"
+	BrightYellow  = "\u001b[33;1m"
+	BrightBlue    = "\u001b[34;1m"
+	BrightMagenta = "\u001b[35;1m"
+	BrightCyan    = "\u001b[36;1m"
+	BrightWhite   = "\u001b[37;1m"
 )
 
-// Log represents the structure of a log message
-type Log struct {
-	Filename  string    `json:"filename"`
-	Line      string    `json:"line"`
-	Timestamp time.Time `json:"timestamp"`
+// LoggerContent represents the structure of the log.
+type LoggerContent struct {
+	Filename  string `json:"filename"`
+	Line      string `json:"line"`
+	Timestamp string `json:"timestamp"`
 
-	Optional *Optional `json:"optional"`
+	*LoggerStatus  `json:"logger_status,omitempty"`
+	*LoggerMessage `json:"logger_message,omitempty"`
+	*LoggerFault   `json:"logger_fault,omitempty"`
 }
 
-// Optional represents the structure of the optional log fields
-type Optional struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
-	Error   error  `json:"error"`
+// LoggerStatus represents the log status field.
+type LoggerStatus struct {
+	Status string `json:"status,omitempty"`
 }
 
-// StartLog creates log file at the root of the current working directory
-func StartLog() (err error) {
+// LoggerMessage represents the log message field.
+type LoggerMessage struct {
+	Message string `json:"message,omitempty"`
+}
+
+// LoggerFault represents the log fault field.
+type LoggerFault struct {
+	Fault string `json:"fault,omitempty"`
+}
+
+// StartLogger creates a log file at the root of the current directory.
+func StartLogger() error {
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Unable to get working directory: %v", err)
@@ -66,8 +76,8 @@ func StartLog() (err error) {
 	return nil
 }
 
-// FindLog finds a log file in the current working directory
-func FindLog() (logFile string, err error) {
+// FindLogger looks for a log file in the current directory.
+func FindLogger() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Unable to get working directory: %v", err)
@@ -81,170 +91,272 @@ func FindLog() (logFile string, err error) {
 		return "", err
 	}
 
-	logFile = strings.Join(file, "")
+	loggerFile := strings.Join(file, "")
 
-	return logFile, nil
+	return loggerFile, nil
 }
 
-// BuildLog formats and writes content to the log file
-func BuildLog(optional *Optional) (logContent *Log, err error) {
-	// Get information about the file and the line
-	_, filename, line, _ := runtime.Caller(1)
-
-	logContent = &Log{
-		Filename:  filename,
-		Line:      strconv.Itoa(line),
-		Timestamp: time.Now().UTC(),
-		Optional:  optional,
-	}
-
+// SaveLogger formats and writes content to the log file.
+func SaveLogger(logger *LoggerContent) error {
 	// Find the log file
-	logFile, err := FindLog()
+	loggerFile, err := FindLogger()
 	if err != nil {
 		log.Fatalf("Unable to find the log file: %v", err)
-		return logContent, err
+		return err
 	}
 
 	// Format and save log file
-	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(loggerFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("Unable to create/append/open file: %v", err)
-		return logContent, err
+		return err
 	}
 
-	formatLog, err := json.MarshalIndent(logContent, "", " ")
+	formated, err := json.MarshalIndent(logger, "", " ")
 	if err != nil {
 		log.Fatalf("Unable to marshal log: %v", err)
-		return logContent, err
+		return err
 	}
 
-	_, err = file.Write([]byte(formatLog))
+	_, err = file.Write([]byte(formated))
 	if err != nil {
 		log.Fatalf("Unable to write to file: %v", err)
-		return logContent, err
+		return err
 	}
 
 	err = file.Close()
 	if err != nil {
 		log.Fatalf("Unable to close file: %v", err)
-		return logContent, err
+		return err
 	}
 
-	return logContent, nil
+	return nil
 }
 
-// Logger prints a log with filename, line, timestamp, status, message and error
-func Logger(logStatus, logMessage string, logError error) {
-	logContent, err := BuildLog(&Optional{Status: logStatus, Message: logMessage, Error: logError})
-	if err != nil {
-		log.Fatalf("Unable to build log: %v", err)
+// FormatLogger formats the log output.
+func FormatLogger(logger *LoggerContent, color string) string {
+	if len(logger.LoggerStatus.Status) > 0 {
+		formated := fmt.Sprintf("%s\n| Filename: %s\n| Line: %s\n| Timestamp: %s\n| Status: %s\n%s", color, logger.Filename, logger.Line, logger.Timestamp, logger.LoggerStatus.Status, Reset)
+		return formated
 	}
 
-	formatLog := fmt.Sprintf("\n### Filename: %s\n### Line: %s\n### Timestamp: %s\n### Status: %s\n### Message: %s\n### Error: %v\n", logContent.Filename, logContent.Line, logContent.Timestamp, logContent.Optional.Status, logContent.Optional.Message, logContent.Optional.Error)
+	if len(logger.LoggerMessage.Message) > 0 {
+		formated := fmt.Sprintf("%s\n| Filename: %s\n| Line: %s\n| Timestamp: %s\n| Message: %s\n%s", color, logger.Filename, logger.Line, logger.Timestamp, logger.LoggerMessage.Message, Reset)
+		return formated
+	}
 
-	// Remove the timestamp provided by log package
-	log.SetFlags(0)
+	if len(logger.LoggerFault.Fault) > 0 {
+		formated := fmt.Sprintf("%s\n| Filename: %s\n| Line: %s\n| Timestamp: %s\n| Fault: %v\n%s", color, logger.Filename, logger.Line, logger.Timestamp, logger.LoggerFault.Fault, Reset)
+		return formated
+	}
 
-	switch strings.ToLower(logContent.Optional.Status) {
+	if len(logger.LoggerStatus.Status) <= 0 && len(logger.LoggerMessage.Message) <= 0 && len(logger.LoggerFault.Fault) <= 0 {
+		formated := fmt.Sprintf("%s\n| Filename: %s\n| Line: %s\n| Timestamp: %s\n%s", color, logger.Filename, logger.Line, logger.Timestamp, Reset)
+		return formated
+	}
+
+	formated := fmt.Sprintf("%s\n| Filename: %s\n| Line: %s\n| Timestamp: %s\n| Status: %s\n| Message: %s\n| Fault: %v\n%s", color, logger.Filename, logger.Line, logger.Timestamp, logger.LoggerStatus.Status, logger.LoggerMessage.Message, logger.LoggerFault.Fault, Reset)
+	return formated
+}
+
+// Complete outputs a log with a given status, message and fault.
+func Complete(status, message string, fault error) {
+	// Disable default log timestamp
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+
+	// Get information about the file and the line
+	_, filename, line, _ := runtime.Caller(1)
+
+	logger := &LoggerContent{
+		Filename:      filename,
+		Line:          strconv.Itoa(line),
+		Timestamp:     time.Now().Format(time.RFC3339),
+		LoggerStatus:  &LoggerStatus{Status: status},
+		LoggerMessage: &LoggerMessage{Message: message},
+		LoggerFault:   &LoggerFault{Fault: fmt.Sprint(fault)},
+	}
+
+	err := SaveLogger(logger)
+	if err != nil {
+		log.Fatalf("Unable to save logger to log file: %v", err)
+	}
+
+	switch logger.LoggerStatus.Status {
 	case "success":
-		log.Printf(Green+"\n%v\n"+Reset, formatLog)
+		log.Print(FormatLogger(logger, BrightGreen))
 	case "info":
-		log.Printf(Cyan+"\n%v\n"+Reset, formatLog)
-	case "warning":
-		log.Printf(Yellow+"\n%v\n"+Reset, formatLog)
+		log.Print(FormatLogger(logger, BrightBlue))
+	case "error":
+		log.Print(FormatLogger(logger, BrightYellow))
 	case "fatal":
-		log.Fatalf(Purple+"\n%v\n"+Reset, formatLog)
+		log.Fatal(FormatLogger(logger, BrightMagenta))
 	case "panic":
-		log.Panicf(Red+"\n%v\n"+Reset, formatLog)
+		log.Panic(FormatLogger(logger, BrightRed))
 	default:
-		log.Printf(Blue+"\n%v\n"+Reset, formatLog)
+		log.Print(FormatLogger(logger, BrightCyan))
 	}
 }
 
-// SimpleLogger prints a log with filename, line and timestamp
-func SimpleLogger() {
-	logContent, err := BuildLog(&Optional{})
-	if err != nil {
-		log.Fatalf("Unable to build log: %v", err)
+// Simple outputs a log with the default information.
+func Simple() {
+	// Disable default log timestamp
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+
+	// Get information about the file and the line
+	_, filename, line, _ := runtime.Caller(1)
+
+	logger := &LoggerContent{
+		Filename:      filename,
+		Line:          strconv.Itoa(line),
+		Timestamp:     time.Now().Format(time.RFC3339),
+		LoggerStatus:  &LoggerStatus{},
+		LoggerMessage: &LoggerMessage{},
+		LoggerFault:   &LoggerFault{},
 	}
 
-	formatLog := fmt.Sprintf("\n### Filename: %s\n### Line: %s\n### Timestamp: %s\n", logContent.Filename, logContent.Line, logContent.Timestamp)
+	err := SaveLogger(logger)
+	if err != nil {
+		log.Fatalf("Unable to save logger to log file: %v", err)
+	}
 
-	// Remove the timestamp provided by log package
-	log.SetFlags(0)
-
-	log.Printf(Blue+"\n%v\n"+Reset, formatLog)
+	log.Print(FormatLogger(logger, BrightCyan))
 }
 
-// StatusLogger prints a log with filename, line, timestamp and status
-func StatusLogger(logStatus string) {
-	logContent, err := BuildLog(&Optional{Status: logStatus})
-	if err != nil {
-		log.Fatalf("Unable to build log: %v", err)
+// Status outputs a log with a given status.
+func Status(status string) {
+	// Disable default log timestamp
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+
+	// Get information about the file and the line
+	_, filename, line, _ := runtime.Caller(1)
+
+	logger := &LoggerContent{
+		Filename:      filename,
+		Line:          strconv.Itoa(line),
+		Timestamp:     time.Now().Format(time.RFC3339),
+		LoggerStatus:  &LoggerStatus{Status: status},
+		LoggerMessage: &LoggerMessage{},
+		LoggerFault:   &LoggerFault{},
 	}
 
-	formatLog := fmt.Sprintf("\n### Filename: %s\n### Line: %s\n### Timestamp: %s\n### Status: %s\n", logContent.Filename, logContent.Line, logContent.Timestamp, logContent.Optional.Status)
+	err := SaveLogger(logger)
+	if err != nil {
+		log.Fatalf("Unable to save logger to log file: %v", err)
+	}
 
-	// Remove the timestamp provided by log package
-	log.SetFlags(0)
-
-	switch strings.ToLower(logContent.Optional.Status) {
+	switch logger.LoggerStatus.Status {
 	case "success":
-		log.Printf(Green+"\n%v\n"+Reset, formatLog)
+		log.Print(FormatLogger(logger, BrightGreen))
 	case "info":
-		log.Printf(Cyan+"\n%v\n"+Reset, formatLog)
-	case "warning":
-		log.Printf(Yellow+"\n%v\n"+Reset, formatLog)
+		log.Print(FormatLogger(logger, BrightBlue))
+	case "error":
+		log.Print(FormatLogger(logger, BrightYellow))
 	case "fatal":
-		log.Fatalf(Purple+"\n%v\n"+Reset, formatLog)
+		log.Fatal(FormatLogger(logger, BrightMagenta))
 	case "panic":
-		log.Panicf(Red+"\n%v\n"+Reset, formatLog)
+		log.Panic(FormatLogger(logger, BrightRed))
 	default:
-		log.Printf(Blue+"\n%v\n"+Reset, formatLog)
+		log.Print(FormatLogger(logger, BrightCyan))
 	}
 }
 
-// MessageLogger prints a log with filename, line, timestamp and message
-func MessageLogger(logMessage string) {
-	logContent, err := BuildLog(&Optional{Message: logMessage})
-	if err != nil {
-		log.Fatalf("Unable to build log: %v", err)
+// Message outputs a log with a given message.
+func Message(message string) {
+	// Disable default log timestamp
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+
+	// Get information about the file and the line
+	_, filename, line, _ := runtime.Caller(1)
+
+	logger := &LoggerContent{
+		Filename:      filename,
+		Line:          strconv.Itoa(line),
+		Timestamp:     time.Now().Format(time.RFC3339),
+		LoggerStatus:  &LoggerStatus{},
+		LoggerMessage: &LoggerMessage{Message: message},
+		LoggerFault:   &LoggerFault{},
 	}
 
-	formatLog := fmt.Sprintf("\n### Filename: %s\n### Line: %s\n### Timestamp: %s\n### Message: %s\n", logContent.Filename, logContent.Line, logContent.Timestamp, logContent.Optional.Message)
+	err := SaveLogger(logger)
+	if err != nil {
+		log.Fatalf("Unable to save logger to log file: %v", err)
+	}
 
-	// Remove the timestamp provided by log package
-	log.SetFlags(0)
-
-	log.Printf(Blue+"\n%v\n"+Reset, formatLog)
+	log.Print(FormatLogger(logger, BrightCyan))
 }
 
-// ErrorLogger prints a log with filename, line, timestamp and error
-func ErrorLogger(logError error) {
-	logContent, err := BuildLog(&Optional{Error: logError})
-	if err != nil {
-		log.Fatalf("Unable to build log: %v", err)
+// Error outputs a log with a given fault.
+func Error(fault error) {
+	// Disable default log timestamp
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+
+	// Get information about the file and the line
+	_, filename, line, _ := runtime.Caller(1)
+
+	logger := &LoggerContent{
+		Filename:      filename,
+		Line:          strconv.Itoa(line),
+		Timestamp:     time.Now().Format(time.RFC3339),
+		LoggerStatus:  &LoggerStatus{},
+		LoggerMessage: &LoggerMessage{},
+		LoggerFault:   &LoggerFault{Fault: fmt.Sprint(fault)},
 	}
 
-	formatLog := fmt.Sprintf("\n### Filename: %s\n### Line: %s\n### Timestamp: %s\n### Error: %v\n", logContent.Filename, logContent.Line, logContent.Timestamp, logContent.Optional.Error)
+	err := SaveLogger(logger)
+	if err != nil {
+		log.Fatalf("Unable to save logger to log file: %v", err)
+	}
 
-	// Remove the timestamp provided by log package
-	log.SetFlags(0)
-
-	log.Fatalf(Purple+"\n%v\n"+Reset, formatLog)
+	log.Print(logger.LoggerFault.Fault)
+	log.Print(FormatLogger(logger, BrightYellow))
 }
 
-// PanicLogger prints a log with filename, line, timestamp and error
-func PanicLogger(logError error) {
-	logContent, err := BuildLog(&Optional{Error: logError})
-	if err != nil {
-		log.Fatalf("Unable to build log: %v", err)
+// Fatal outputs a log with a given fault.
+func Fatal(fault error) {
+	// Disable default log timestamp
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+
+	// Get information about the file and the line
+	_, filename, line, _ := runtime.Caller(1)
+
+	logger := &LoggerContent{
+		Filename:      filename,
+		Line:          strconv.Itoa(line),
+		Timestamp:     time.Now().Format(time.RFC3339),
+		LoggerStatus:  &LoggerStatus{},
+		LoggerMessage: &LoggerMessage{},
+		LoggerFault:   &LoggerFault{Fault: fmt.Sprint(fault)},
 	}
 
-	formatLog := fmt.Sprintf("\n### Filename: %s\n### Line: %s\n### Timestamp: %s\n### Error: %v\n", logContent.Filename, logContent.Line, logContent.Timestamp, logContent.Optional.Error)
+	err := SaveLogger(logger)
+	if err != nil {
+		log.Fatalf("Unable to save logger to log file: %v", err)
+	}
 
-	// Remove the timestamp provided by log package
-	log.SetFlags(0)
+	log.Print(FormatLogger(logger, BrightMagenta))
+}
 
-	log.Panicf(Red+"\n%v\n"+Reset, formatLog)
+// Panic outputs a log with a given fault.
+func Panic(fault error) {
+	// Disable default log timestamp
+	log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+
+	// Get information about the file and the line
+	_, filename, line, _ := runtime.Caller(1)
+
+	logger := &LoggerContent{
+		Filename:      filename,
+		Line:          strconv.Itoa(line),
+		Timestamp:     time.Now().Format(time.RFC3339),
+		LoggerStatus:  &LoggerStatus{},
+		LoggerMessage: &LoggerMessage{},
+		LoggerFault:   &LoggerFault{Fault: fmt.Sprint(fault)},
+	}
+
+	err := SaveLogger(logger)
+	if err != nil {
+		log.Fatalf("Unable to save logger to log file: %v", err)
+	}
+
+	log.Print(FormatLogger(logger, BrightRed))
 }
